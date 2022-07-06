@@ -41,6 +41,7 @@ def load_config(path):
 
 
 if __name__ == '__main__':
+    # export TMPDIR="/mnt/voice/gazizullina/workdir/ext/pip_cache/"
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str,
                         help="Path to .yml file with configuration parameters.")

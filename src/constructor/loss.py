@@ -59,7 +59,10 @@ class JointLoss(nn.Module):
                 active_loss = True
             else:
                 loss = 0
-            total_loss = total_loss + loss * self.weights[i]
+            if not isinstance(loss, dict): #TODO: remove
+                total_loss = total_loss + loss * self.weights[i]
+            else:
+                total_loss = loss
         if not active_loss:
             raise RuntimeError('Expected arguments to pass in at least one loss in loss list')
         return total_loss

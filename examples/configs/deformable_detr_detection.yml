@@ -1,0 +1,165 @@
+task:
+  name: DetectionTask
+  params:
+    bbx_conf_thr: 0.5
+    num_backbone_outs: &num_backbone_outs 3
+    backbone_name: resnet50_v2
+    backbone_params:
+      in_chans: &num_channels 3
+#      norm_layer: FrozenBatchNorm2d
+      pretrained: true
+    neck_name: DeformableDETR
+    neck_params:
+      backbone_outs_channels: [512, 1024, 2048]
+      num_backbone_outs: *num_backbone_outs
+      hidden_dim: &hidden_dim 256 #TODO: from backbone
+      num_queries: 30
+      num_feature_levels: &num_feature_levels 4
+      pos_emb_name: sine
+      transformer_params:
+        d_model: *hidden_dim
+        nhead: 8
+        num_encoder_layers: 3 #6
+        num_decoder_layers: &num_decoder_layers 3 #6
+        dim_feedforward: 1024
+        dropout: 0.1
+        dec_n_points: 4
+        enc_n_points: 4
+        num_feature_levels: *num_feature_levels
+
+
+#    activation="relu",
+#    return_intermediate_dec=True,
+#    num_feature_levels=args.num_feature_levels,
+
+
+
+
+    head_name: DeformableDetrHead
+    head_params:
+      num_pred: *num_decoder_layers
+      input_dim: *hidden_dim
+      num_classes: &num_classes 2
+    hat_name: DetrPostProcess
+    hat_params:
+      topk: 20
+#    input_size: [ *num_channels, &height 256, &width 256 ]
+    input_size: [*num_channels, &height 720, &width 1280]
+
+loss:
+  loss_list:
+    - name: DeformableDetrCriterion
+      params:
+        num_classes: 1
+        losses: ["labels", "boxes", "cardinality"]
+        weight_dict:
+          loss_ce: &cost_class_w 2
+          loss_bbox: &cost_bbox_w 5
+          loss_giou: &cost_giou_w 2
+#          cardinality_error: 0.1
+        focal_alpha: 0.25
+        cost_class: *cost_class_w
+        cost_bbox: *cost_bbox_w
+        cost_giou: *cost_giou_w
+        target_fields:
+          input: output
+          target: target
+
+optimizers:
+  name: AdamW
+  params:
+    lr: &initial_lr 0.0001
+    weight_decay: 0.001
+
+schedulers:
+  name: CosineAnnealingWarmRestarts
+  params:
+    T_0: 5
+    T_mult: 2
+
+data:
+  common_params:
+    data_folder: '/mnt/voice/gazizullina/workdir/barrier_reef_data'
+
+  train_params:
+    name: DetrDetectionDataset
+    dataloader_params: &dataloader_params
+      batch_size: &batch_size 2
+      num_workers: &num_workers 2
+      shuffle: false
+      drop_last: true
+      use_custom_collate_fn: &use_custom_collate_fn true
+    params:
+      path_to_datalist: "train_without_neg0.csv"
+    transform:
+      - &normalize
+        name: Normalize
+        params:
+          mean: [ 0.485, 0.456, 0.406 ]
+          std: [ 0.229, 0.224, 0.225 ]
+      - &totensor
+        name: ToTensorV2
+#    augment:
+#      - name: HorizontalFlip
+
+  valid_params:
+    name: DetrDetectionDataset
+    dataloader_params:
+      batch_size: *batch_size
+      num_workers: *num_workers
+      shuffle: false
+      drop_last: false
+      use_custom_collate_fn: *use_custom_collate_fn
+    params:
+      path_to_datalist: "valid_without_neg0.csv"
+    transform:
+      - &resize
+        name: Resize
+        params:
+          height: *height
+          width: *width
+      - *normalize
+      - *totensor
+
+trainer:
+  gpus: [0, 1, 2, 3, 4, 5]
+#  gpus: []
+  accelerator: 'ddp'
+  max_epochs: 150
+  progress_bar_refresh_rate: 1
+  check_val_every_n_epoch: 1
+  precision: 16
+  num_sanity_val_steps: 10
+  sync_batchnorm: True
+#  gradient_clip_val: 0.1
+#  amp_level: 'O2'
+#  amp_backend: 'apex'
+
+log_dir: '/mnt/voice/gazizullina/workdir/lightning_runs/barrier_reef'
+experiment_name: deformable_detr_v1
+
+logger:
+  logger: tensorboard
+  log_graph: false
+
+checkpoint:
+  monitor: train/loss
+#  monitor: valid/loss
+  save_last: true
+  mode: min
+  save_top_k: 1
+
+profiler:
+  name: simple
+  save_profile: false
+
+metrics:
+  - name: MeanAveragePrecision
+    phases: ['valid', 'test']
+    params:
+      nproc: 1
+      num_classes: *num_classes
+      iou_thr: 0.5
+      target_fields:
+        target: target
+        prediction: prediction

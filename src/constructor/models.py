@@ -49,6 +49,7 @@ def create_backbone(
         create_fn = model_entrypoint(model_name)
 
         pretrained_models = list_models(pretrained=True)
+        print("model name", model_name)
         pretrain = pretrained and (model_name in pretrained_models)
         margs['pretrained'] = pretrain
         if pretrained and not pretrain:

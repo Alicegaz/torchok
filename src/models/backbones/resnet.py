@@ -11,6 +11,7 @@ import torch.nn as nn
 
 from src.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from src.models.layers import DropBlock2d, DropPath, AvgPool2dSame, BlurPool2d, create_attn
+from src.models.layers import norm
 from .base import BackboneBase
 from .utils.helpers import build_model_with_cfg
 from .utils.registry import register_model
@@ -45,6 +46,9 @@ default_cfgs = {
         url='https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/resnet26d-69e92c46.pth',
         interpolation='bicubic', first_conv='conv1.0'),
     'resnet50': _cfg(
+        url='https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/resnet50_ram-a26f946b.pth',
+        interpolation='bicubic'),
+    'resnet50_v2': _cfg(
         url='https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/resnet50_ram-a26f946b.pth',
         interpolation='bicubic'),
     'resnet50d': _cfg(
@@ -530,11 +534,14 @@ class ResNet(BackboneBase):
     aa_layer : nn.Module, anti-aliasing layer
     """
 
-    def __init__(self, block, layers, in_chans=3,
-                 cardinality=1, base_width=64, stem_width=64, stem_type='',
-                 output_stride=32, block_reduce_first=1, down_kernel_size=1, avg_down=False,
-                 act_layer=nn.ReLU, norm_layer=nn.BatchNorm2d, aa_layer=None, drop_path_rate=0.,
-                 drop_block_rate=0., zero_init_last_bn=True, block_args=None, set_neck=False):
+    def __init__(self, block, layers, in_chans: int = 3,
+                 cardinality: int = 1, base_width: int = 64, stem_width: int = 64,
+                 stem_type: str = '', output_stride: int = 32, block_reduce_first: int = 1,
+                 down_kernel_size: int = 1, avg_down: bool = False,
+                 act_layer=nn.ReLU, norm_layer=nn.BatchNorm2d, aa_layer=None,
+                 drop_path_rate: float = 0.,
+                 drop_block_rate: float = 0., zero_init_last_bn: bool = True,
+                 block_args=None, set_neck: bool = False):
         block_args = block_args or dict()
         assert output_stride in (8, 16, 32)
         super(ResNet, self).__init__()
@@ -662,6 +669,15 @@ def resnet26d(pretrained=False, **kwargs):
 def resnet50(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model.
     """
+    model_args = dict(block=Bottleneck, layers=[3, 4, 6, 3], **kwargs)
+    return _create_resnet('resnet50', pretrained, **model_args)
+
+@register_model
+def resnet50_v2(pretrained=False, **kwargs):
+    """Constructs a ResNet-50 model.
+    """
+    norm_layer_name = kwargs.get('norm_layer') or "BatchNorm2d"
+    kwargs['norm_layer'] = norm.__dict__[norm_layer_name]
     model_args = dict(block=Bottleneck, layers=[3, 4, 6, 3], **kwargs)
     return _create_resnet('resnet50', pretrained, **model_args)
 

@@ -35,3 +35,7 @@ from .weight_init import trunc_normal_, variance_scaling_, lecun_normal_
 from .poolings import GeM
 from .poolings import CAC
 from .poolings import RMAC
+from .deformable_transformer_decoder_layer import DeformableTransformerDecoderLayer
+from .deformable_transformer_encoder_layer import DeformableTransformerEncoderLayer
+from .ms_deformable_attention import MSDeformAttn
+from .position_encoder import PositionEmbeddingSine, PositionEmbeddingLearned
