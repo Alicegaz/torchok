@@ -1,7 +1,6 @@
-import argparse
-import re
-import yaml
-import os
+import hydra
+import omegaconf
+from omegaconf import OmegaConf, DictConfig
 from pathlib import Path
 
 # Hack to fix multiprocessing deadlock when PyTorch's DataLoader is used
@@ -9,49 +8,28 @@ from pathlib import Path
 import cv2
 cv2.setNumThreads(0)
 
-from src.registry import TASKS
-from src.constructor.config_structure import TrainConfigParams
-from src.constructor import create_trainer
+from src.constructor.config_structure import ConfigParams
+from src.constructor.runner import create_trainer
+from src.constructor import TASKS
 
 
-def load_config(path):
-    # environment variables substitution, so ${ENV_VAR} is substituted in every scalar value
-    env_matcher = re.compile(r'\$\{([^}^{]+)\}')
-    
-    def _env_constructor(loader, node, deep=False):
-        value = loader.construct_scalar(node)
-            
-        match = env_matcher.search(value)
-        if match:
-            env_var = match.group()[2:-1]
-            full_var = value[:match.start()] + os.environ.get(env_var, '') + value[match.end():]
+@hydra.main(config_path='configs')
+def main(config: DictConfig):
+    # Need to add --config-path (-cp) and --config_name (-cn) in run command
+    # Example config: examples/configs/classification_cifar10.yaml
+    # Then the command will be:
+    # python --config-path configs --config_name classification_cifar10
 
-            return full_var
-
-        return value
-    
-    yaml.add_constructor(yaml.resolver.BaseResolver.DEFAULT_SCALAR_TAG, _env_constructor, yaml.SafeLoader)
-    
-    path = Path(path)
-    if not path.exists() or path.suffix != ".yml":
-        raise Exception('You must provide path to existing .yml file')
-
-    with open(path) as f:
-        return yaml.safe_load(f)
-
+    # Resolve -> change evn variable to values for example ${oc.env:USER} -> 'root'
+    OmegaConf.resolve(config)
+    # Register structure
+    schema = OmegaConf.structured(ConfigParams)
+    # Merge structure with config
+    config = OmegaConf.merge(schema, config)
+    # Create task
+    model = TASKS.get(config.task.name)(config)
+    trainer = create_trainer(config)
+    trainer.fit(model)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str,
-                        help="Path to .yml file with configuration parameters.")
-    parser.add_argument('--job_link', type=str,
-                        help="sagemaker job name, if running localy set to 'local'", default='local')
-    args = parser.parse_args()
-    config_path = args.config
-
-    config_yaml = load_config(config_path)
-    config = TrainConfigParams(**config_yaml)
-
-    model = TASKS.get(config.task.name)(config)
-    trainer = create_trainer(config, str(args.job_link))
-    trainer.fit(model)
+    main()

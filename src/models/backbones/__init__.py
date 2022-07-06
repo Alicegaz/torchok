@@ -1,43 +1,50 @@
-# from .byoanet import *
-from .byobnet import *
-from .cait import *
-from .coat import *
-# from .cspnet import *
-# from .densenet import *
-# from .dla import *
-# from .dpn import *
-from .efficientnet import *
-# from .ghostnet import *
-from .gluon_resnet import *
-# from .gluon_xception import *
-# from .hardcorenas import *
-from .hrnet import *
-# from .inception_resnet_v2 import *
-# from .inception_v3 import *
-from .inception_v4 import *
-from .mobilenetv3 import *
-# from .nasnet import *
-from .nfnet import *
-# from .pit import *
-# from .pnasnet import *
-# from .regnet import *
-from .res2net import *
-from .resnest import *
-from .resnet import *
-from .resnetv2 import *
-from .rexnet import *
-# from .selecsls import *
-# from .senet import *
-# from .sknet import *
-from .swin_transformer import *
-# from .tnt import *
-from .torchscript_model import *
-# from .tresnet import *
-from .vgg import *
-from .vision_transformer import *
-# from .vision_transformer_hybrid import *
-# from .vovnet import *
-# from .xception import *
-# from .xception_aligned import *
-from .xcit import *
-from .identity import *
+from src.models.backbones.resnet import (
+    create_resnet,
+    resnet18,
+    resnet34,
+    resnet50,
+    resnet101,
+    resnet152,
+    seresnet18,
+    seresnet34,
+    seresnet50,
+    seresnet101,
+    seresnet152,
+)
+from src.models.backbones.hrnet import (
+    create_hrnet,
+    hrnet_w18_small,
+    hrnet_w18_small_v2,
+    hrnet_w18,
+    hrnet_w30,
+    hrnet_w32,
+    hrnet_w40,
+    hrnet_w44,
+    hrnet_w48,
+    hrnet_w64,
+)
+
+__all__ = [
+    'ResNet',
+    'create_resnet',
+    'resnet18',
+    'resnet34',
+    'resnet50',
+    'resnet101',
+    'resnet152',
+    'seresnet18',
+    'seresnet34',
+    'seresnet50',
+    'seresnet101',
+    'seresnet152',
+    'create_hrnet',
+    'hrnet_w18_small',
+    'hrnet_w18_small_v2',
+    'hrnet_w18',
+    'hrnet_w30',
+    'hrnet_w32',
+    'hrnet_w40',
+    'hrnet_w44',
+    'hrnet_w48',
+    'hrnet_w64',
+]
